@@ -4,18 +4,13 @@ from app.repository.ollama_repo import OllamaStreamChat as OllamaRepo
 from typing import AsyncGenerator, Dict, Any
 import json
 
+from app.configs.settings import settings
+
 class OllamaStreamChat:
     def __init__(self, repo: OllamaRepo):
-        ollama_config = self.load_ollama_config()
-        #self.model_name = model_name
-        self.model_name = ollama_config.get('DEFAULT_MODEL')
+        self.model_name = settings.ollama.default_model
         self.messages = []
-        #self.ollama_url = "http://localhost:11434/api/generate"
-        self.ollama_url = ollama_config.get('OLLAMA_API_URL') + "/api/generate"
-    
-    def load_ollama_config(self):
-        with open('app/configs/ai_ollama_config.json', 'r') as file:
-            return json.load(file)
+        self.ollama_url = f"{settings.ollama.ollama_api_url}/api/generate"
         
     async def stream_chat(self, ollamaPrompt: OllamaDTO, session: aiohttp.ClientSession) -> AsyncGenerator[str, None]:
         """Stream chat response using REST API"""
@@ -90,7 +85,7 @@ class OllamaStreamChat:
     async def health_check(self):
         try:
             # Test connection to Ollama
-            ollamaUrl = self.ollama_config.get('OLLAMA_API_URL') +  "/api/tags"
+            ollamaUrl = f"{settings.ollama.ollama_api_url}/api/tags"
             async with aiohttp.ClientSession() as session:
                 async with session.get(ollamaUrl) as response:
                     if response.status == 200:

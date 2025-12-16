@@ -4,12 +4,14 @@ from app.routers import customer_router, user_router, demo_router, email_router,
 from app.configs import migration
 import json
 
-from app.auth.auth import load_api_keys, auth_middleware_call
+from app.auth.auth import auth_middleware_call
+
+from app.configs.settings import settings
 
 app = FastAPI(
-    title = "RicagoAPI Server",
-    description = "RicagoAPI REST API Server.",
-    version = "1.0.1"
+    title = settings.server.api_name,
+    description = settings.server.api_name, # or description if added to settings
+    version = settings.server.version
 )
 app.include_router(user_router.userRoutes)
 app.include_router(customer_router.customerRoutes)
@@ -17,12 +19,7 @@ app.include_router(demo_router.demoRoutes)
 app.include_router(email_router.emailRoutes)
 app.include_router(ollama_router.aiAgentsRoutes)
 
-def load_api_server_config():
-    with open('app/configs/api_server_config.json', 'r') as file:
-        return json.load(file)
-    
-api_server_config = load_api_server_config()
-origins = api_server_config.get('cors_urls')
+origins = settings.server.cors_urls
 print("CORS Allowed Origins:", origins)
 
 app.add_middleware(
@@ -35,9 +32,10 @@ app.add_middleware(
     #allow_origins = ["*"]  # allow all origins
 )
 
-@app.on_event("startup")
-async def startup_event():
-    app.state.api_keys = load_api_keys()
+# @app.on_event("startup")
+# async def startup_event():
+    # app.state.api_keys = load_api_keys() 
+    # Logic moved to settings.security.api_keys usage
 
 # Middleware to check API key for all requests
 app.middleware("http")(auth_middleware_call)

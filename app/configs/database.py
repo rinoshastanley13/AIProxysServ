@@ -5,24 +5,25 @@ from sqlalchemy.engine import URL
 import os
 #from contextlib import contextmanager
 
-# Get database configuration from environment variables
-DATABASE_TYPE = os.getenv("DATABASE_TYPE", "sqlite")
-DATABASE_URL = os.getenv("DATABASE_URL")
+from app.configs.settings import settings
+
+# Get database configuration from settings
+DATABASE_TYPE = settings.db.database_type
 
 # Connection URL format: dialect+driver://username:password@host:port/database
-if DATABASE_URL:
+if settings.db.database_url:
     # Use DATABASE_URL if provided (for PostgreSQL in Docker)
-    connection_url = DATABASE_URL
+    connection_url = settings.db.database_url
     print(f"Using database from DATABASE_URL: {DATABASE_TYPE}")
 elif DATABASE_TYPE == "postgresql":
-    # PostgreSQL configuration from individual env vars
+    # PostgreSQL configuration from individual settings
     connection_url = URL.create(
         drivername="postgresql+psycopg2",
-        username=os.getenv("POSTGRES_USER", "ricagoapi_user"),
-        password=os.getenv("POSTGRES_PASSWORD", "changeme123"),
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=int(os.getenv("POSTGRES_PORT", "5432")),
-        database=os.getenv("POSTGRES_DB", "ricagoapi")
+        username=settings.db.postgres_user,
+        password=settings.db.postgres_password,
+        host=settings.db.postgres_host,
+        port=settings.db.postgres_port,
+        database=settings.db.postgres_db
     )
     print(f"Using PostgreSQL database: {connection_url}")
 else:
