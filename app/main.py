@@ -7,8 +7,8 @@ import json
 from app.auth.auth import load_api_keys, auth_middleware_call
 
 app = FastAPI(
-    title = "AIProxys Server",
-    description = "AIProxys REST API Server.",
+    title = "RicagoAPI Server",
+    description = "RicagoAPI REST API Server.",
     version = "1.0.1"
 )
 app.include_router(user_router.userRoutes)
@@ -28,7 +28,7 @@ print("CORS Allowed Origins:", origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins = origins,
-    allow_origin_regex=r"https://.*\.aiproxybots\.com",
+    allow_origin_regex=r"https://.*\.ricagoapi\.com",
     allow_credentials = True,
     allow_methods = ["*"],
     allow_headers = ["*"],
