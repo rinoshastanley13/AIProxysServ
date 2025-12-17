@@ -20,7 +20,7 @@ print(verify_api_key(k))  # True
 print(verify_api_key("wrong_key"))  # False
 """
 #----------------------- JWT Token Generation -----------------
-SECRET_KEY = "BashaAPIKey"  # Keep safe!
+SECRET_KEY = "RICAGOAPIKey"  # Keep safe!
 
 def generate_jwt():
     payload = {

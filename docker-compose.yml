@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: ricagoapi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ricagoapi}
+      POSTGRES_USER: ${POSTGRES_USER:-ricagoapi_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - ricago-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ricagoapi_user} -d ${POSTGRES_DB:-ricagoapi}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Application
+  ricagoapi-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ricagoapi-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Database Configuration
+      DATABASE_TYPE: ${DATABASE_TYPE:-postgresql}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ricagoapi_user}:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/${POSTGRES_DB:-ricagoapi}
+
+      # Application Configuration
+      API_HOST: ${API_HOST:-0.0.0.0}
+      API_PORT: ${API_PORT:-8000}
+      SECRET_KEY: ${SECRET_KEY:-RICAGO}
+
+      # Botpress Integration (optional)
+      BOTPRESS_URL: ${BOTPRESS_URL:-http://botpress:3000}
+    volumes:
+      - ./app:/app/app
+      - api_logs:/app/logs
+    ports:
+      - "${API_PORT:-8000}:8000"
+    networks:
+      - ricago-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/ || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Botpress Chatbot Platform
+  botpress:
+    image: botpress/server:latest
+    container_name: ricagoapi-botpress
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-ricagoapi_user}:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/${BOTPRESS_DB:-botpress}
+      BP_MODULE_NLU_DUCKLINGURL: http://duckling:8000
+      EXTERNAL_URL: ${BOTPRESS_EXTERNAL_URL:-http://localhost:3000}
+      BP_PRODUCTION: ${BP_PRODUCTION:-false}
+    volumes:
+      - botpress_data:/botpress/data
+    ports:
+      - "${BOTPRESS_PORT:-3000}:3000"
+    networks:
+      - ricago-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:3000/status || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Duckling (NLU service for Botpress - optional but recommended)
+  duckling:
+    image: rasa/duckling:latest
+    container_name: ricagoapi-duckling
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    networks:
+      - ricago-net
+
+  # PgAdmin (Postgres Dashboard)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: ricagoapi-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@ricago.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - ricago-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+  botpress_data:
+    driver: local
+  api_logs:
+    driver: local
+
+# Custom network for inter-service communication
+networks:
+  ricago-net:
+    driver: bridge

@@ -8,26 +8,23 @@ from fastapi_mail import FastMail, ConnectionConfig, MessageSchema
 import json
 import asyncio
 
+from app.configs.settings import settings
+
 class Email(BaseRepository[EmailModel]):
     def __init__(self):
         super().__init__(EmailModel)
 
-    def load_smtp_config(self):
-        with open('app/configs/mail_config.json', 'r') as file:
-            return json.load(file)
-
     def emailConfig(self):
-        smtp_config = self.load_smtp_config()
         conf = ConnectionConfig(
-            MAIL_USERNAME = smtp_config.get('MAIL_USERNAME'), # "AIProxyBots@gmail.com",
-            MAIL_PASSWORD = smtp_config.get('MAIL_PASSWORD'),  # "uawcdjqovodpinsu",  # App password from Step 1
-            MAIL_FROM = smtp_config.get('MAIL_FROM'),  #"AIProxyBots@gmail.com",
-            MAIL_PORT = smtp_config.get('MAIL_PORT'),  #465,
-            MAIL_SERVER = smtp_config.get('MAIL_SERVER'), #"smtp.gmail.com",
-            MAIL_STARTTLS = smtp_config.get('MAIL_STARTTLS'), #False,   # For port 465, SSL/TLS is True
-            MAIL_SSL_TLS = smtp_config.get('MAIL_SSL_TLS'), #True,     
-            USE_CREDENTIALS = smtp_config.get('USE_CREDENTIALS'),  #True,
-            VALIDATE_CERTS = smtp_config.get('VALIDATE_CERTS') #True
+            MAIL_USERNAME = settings.mail.mail_username,
+            MAIL_PASSWORD = settings.mail.mail_password,
+            MAIL_FROM = settings.mail.mail_from,
+            MAIL_PORT = settings.mail.mail_port,
+            MAIL_SERVER = settings.mail.mail_server,
+            MAIL_STARTTLS = settings.mail.mail_starttls,
+            MAIL_SSL_TLS = settings.mail.mail_ssl_tls,
+            USE_CREDENTIALS = settings.mail.use_credentials,
+            VALIDATE_CERTS = settings.mail.validate_certs
         )
         return conf
 

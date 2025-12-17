@@ -4,23 +4,17 @@ from app.repository.ollama_repo import OllamaStreamChat as OllamaRepo
 from typing import AsyncGenerator, Dict, Any, List
 import json
 
+from app.configs.settings import settings
+
 class OllamaStreamChat:
     _msgHistory: List[Dict[str, str]] = []
 
     def __init__(self, repo: OllamaRepo):
-        ollama_config = self.load_ollama_config()
-        #self.model_name = model_name
-        self.model_name = ollama_config.get('DEFAULT_MODEL')
-        #print("Config Default Model: ", ollama_config.get('DEFAULT_MODEL'))
+        self.model_name = settings.ollama.default_model
         self.messages = []
-        #self.ollama_url_genapi = "http://localhost:11434/api/generate"
-        self.ollama_url_genapi = ollama_config.get('OLLAMA_API_URL') + "/api/generate"
-        self.ollama_url_chatapi = ollama_config.get('OLLAMA_API_URL') + "/api/chat"
+        self.ollama_url_genapi = f"{settings.ollama.ollama_api_url}/api/generate"
+        self.ollama_url_chatapi = f"{settings.ollama.ollama_api_url}/api/chat"
     
-    def load_ollama_config(self):
-        with open('app/configs/ai_ollama_config.json', 'r') as file:
-            return json.load(file)
-
     @classmethod
     def getMessageHistory(cls):
         return cls._msgHistory
@@ -269,7 +263,7 @@ class OllamaStreamChat:
     async def health_check(self):
         try:
             # Test connection to Ollama
-            ollamaUrl = self.ollama_config.get('OLLAMA_API_URL') +  "/api/tags"
+            ollamaUrl = f"{settings.ollama.ollama_api_url}/api/tags"
             async with aiohttp.ClientSession() as session:
                 async with session.get(ollamaUrl) as response:
                     if response.status == 200:

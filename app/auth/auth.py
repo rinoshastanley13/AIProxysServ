@@ -7,6 +7,8 @@ from fastapi.responses import JSONResponse
 
 from app.schema.api_config_dto import APIKeyConfig
 
+from app.configs.settings import settings
+
 def verify_api_key():
     return True
 
@@ -21,20 +23,6 @@ def authenticate_user():
         return True
     else:
         return False
-    
-
-
-
-# Load configuration
-def load_api_keys() -> List[APIKeyConfig]:
-    config_path = Path("app/configs/api_key_config.json")
-    with open(config_path, 'r') as f:
-        config = json.load(f)
-    
-    # Convert each API key dict to APIKeyConfig object
-    api_keys = [APIKeyConfig(**key_data) for key_data in config.get("api_keys", [])]
-    return api_keys
-
 
 # Middleware to check API key for all requests
 def auth_middleware(request: Request):
@@ -49,7 +37,15 @@ def auth_middleware(request: Request):
     valid_key = False
     key_config = None
     
-    for stored_key in request.app.state.api_keys:
+    # Use settings.security.api_keys instead of request.app.state.api_keys (depending on preference)
+    # But main.py sets request.app.state.api_keys. 
+    # For cleaner migration, we can either update main.py to set it from settings, or direct access here.
+    # main.py sets app.state.api_keys = load_api_keys().
+    # Let's inspect main.py again. I already updated config loading in main.py but didn't remove app.state.api_keys setting yet.
+    # Better to direct access here or access via settings?
+    # Access via settings is cleaner if we assume settings is improved singleton.
+    
+    for stored_key in settings.security.api_keys:
         if secrets.compare_digest(api_key, stored_key.key) and stored_key.enabled:
             valid_key = True
             key_config = stored_key
