@@ -1,6 +1,15 @@
 from pydantic import BaseModel, Field
 from datetime import  date, time
-from typing import Optional
+from typing import Optional, List
+
+class Message(BaseModel):
+    role: str  # "user", "assistant", or "system"
+    content: str
+
+class OllamaChatRequest(BaseModel):
+    messages: List[Message]
+    model: Optional[str] = None
+    stream: Optional[bool] = True
 
 class OllamaPrompt(BaseModel):
     model: Optional[str] = Field(default=None)

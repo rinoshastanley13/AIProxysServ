@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 import json
+from typing import List, Dict
 
 from app.services.ollama_serv import OllamaStreamChat as OllamaServ
 from app.repository.ollama_repo import OllamaStreamChat as OllamaRepo
-from app.schema.ollama_dto import OllamaPrompt as OllamaDTO
+from app.schema.ollama_dto import OllamaPrompt as OllamaDTO, OllamaChatRequest as CahtRequestDTO
 
 from app.configs.dependencies import get_service_factory
 
@@ -21,7 +22,7 @@ async def stream_agentic_chat(aiPrompt: OllamaDTO, service: OllamaServ = Depends
         # Parse request body
         #body = await request.json()
         prompt = aiPrompt.prompt  #body.get("prompt", "")
-        model = aiPrompt.model or "deepseek-v3.1:671b-cloud" #body.get("model", ollama_client.model_name)
+        model = aiPrompt.model #or "gpt-oss:120b-cloud" #"deepseek-v3.1:671b-cloud" #body.get("model", ollama_client.model_name)
         stream = aiPrompt.stream #body.get("stream", True)
         #print("In Router - ", aiPrompt)
         
@@ -29,10 +30,11 @@ async def stream_agentic_chat(aiPrompt: OllamaDTO, service: OllamaServ = Depends
             raise HTTPException(status_code=400, detail="Prompt is required")
         
         # Update model if different
-        
-        if model != service.model_name:
-            service.model_name = model
-        
+        #print("Using Model Before: ", service.model_name)
+        if model is not None and model != "" and model != service.getModelName():
+            service.setModelName(model)
+        #print("Using Model After: ", service.model_name)
+
         if not stream:
             # Handle non-streaming response (for compatibility)
             return await service.handle_non_streaming(prompt)
@@ -63,7 +65,7 @@ async def stream_agentic_chat(aiPrompt: OllamaDTO, service: OllamaServ = Depends
     #return result
 
 
-@aiAgentsRoutes.post("/chatstream")
+@aiAgentsRoutes.post("/chat")
 async def stream_chat_with_history(chatMsg: OllamaDTO, service: OllamaServ = Depends(ollama_service_dep)):
     """
     Enhanced streaming endpoint with conversation history
@@ -73,6 +75,7 @@ async def stream_chat_with_history(chatMsg: OllamaDTO, service: OllamaServ = Dep
         #body = await request.json()
         user_message = chatMsg.prompt #body.get("message", "")
         model = chatMsg.model #body.get("model", ollama_client.model_name)
+        stream = chatMsg.stream #body.get("stream", True)
         clear_history = chatMsg.clear_chat #body.get("clear_history", False)
         
         if not user_message:
@@ -81,20 +84,43 @@ async def stream_chat_with_history(chatMsg: OllamaDTO, service: OllamaServ = Dep
         if clear_history:
             service.messages = []
         
-        # Update model if different
-        if model != service.model_name:
-            service.model_name = model
+         # Update model if different
+        if model is not None and model != "" and model != service.getModelName():
+            service.setModelName(model)
+
+        history: List[Dict[str, str]] = None
+        system_prompt: str = None
         
-        # Build prompt with history
-        prompt = service._build_prompt(user_message)
+        # Build messages from history
+        if history is None:
+            history = service.getMessageHistory() #history = []
+        
+        if system_prompt is None:
+            system_prompt =  service.load_ollama_config().get("SYSTEM_PROMPT")
+
+        messages = service.build_messages_from_history(history, user_message, system_prompt)
+        chat_request = CahtRequestDTO(messages=messages)
+        chat_request.model = service.model_name
+
+        service.appendMessageHistory("user",user_message)
+        
+        #print("########################## Chat Request #######################", chat_request)
+        if not stream:
+            # Handle non-streaming response (for compatibility)
+            return await service.handle_non_streaming_chat(chat_request)
+
+        async def event_generator():
+            async for chunk in service.generate_chat(chat_request):
+                yield chunk
             
         # Update conversation history after streaming completes
         # Note: In production, you might want to handle this differently
         # to avoid blocking the response
         
         return StreamingResponse(
-            service.generate(chatMsg),
-            media_type="application/x-ndjson",
+            event_generator(),
+            media_type="text/event-stream",
+            #media_type="application/x-ndjson",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
@@ -122,7 +148,7 @@ async def get_available_models(service: OllamaServ = Depends(ollama_service_dep)
                 "digest": "sha256:...",
                 "details": {
                     "format": "gguf",
-                    "family": "deepseek"
+                    "family": "gpt" #"deepseek"
                 }
             }
         ]
