@@ -1,9 +1,13 @@
 {
-    "DEFAULT_MODEL": "deepseek-v3.1:671b-cloud",
+    "DEFAULT_MODEL": "gpt-oss:120b-cloud", 
+    "_comment": "deepseek-v3.1:671b-cloud",
     "OLLAMA_API_URL": "http://localhost:11434",
+    "SYSTEM_PROMPT": "You are an AI assistant specialized exclusively in Indian Regulations, Governance, and Compliance matters.\nCarefully evaluate the question provided below:\n- If the question is directly related to Indian regulations, governance, or compliance (or is relevant to the prior chat context), provide an appropriate response.\n- If the question is not related to Indian regulations, governance, compliance, or the chat context, respond only with the following exact statement (do not add or modify anything):\"I am trained on compliances related Indian regulation only. The question you have asked for is not in my knowledge base. Sorry for the inconvenience!\"",
     "AVAILABLE_MODELS": [
         "llama3.1-8b",
         "llama3.2-13b",
         "llama3.3-70b"
-    ]
+    ],
+    "MODEL_FAMILY": "gpt-oss"
 }
+
